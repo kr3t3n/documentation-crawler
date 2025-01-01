@@ -70,7 +70,19 @@ documentation-crawler/
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Feel free to:
+
+1. Fork the repository
+2. Create a feature branch
+3. Submit a pull request
+
+## 👨‍💻 Author
+
+Created by [Georgi](https://x.com/georgipep) from Mangia Studios Limited.
+
+## ❤️ Support
+
+If you find Documentation Crawler useful, consider [buying me a coffee ☕](https://www.buymeacoffee.com/georgipep)
 
 ## License
 
