@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+python-multipart
+httpx
+beautifulsoup4
+markdown
+openai
+termcolor
+aiohttp
+python-jose[cryptography]
+pydantic
+jinja2 
+groq 

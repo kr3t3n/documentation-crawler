@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation Compiler</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .loading-animation {
+            display: none;
+        }
+        .loading-animation.active {
+            display: block;
+        }
+        .tree-view {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .tree-view .menu {
+            background: transparent !important;
+            width: 100%;
+            padding: 0;
+        }
+        .tree-view ul {
+            width: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        .tree-view li {
+            margin: 0.25rem 0;
+            width: 100%;
+            list-style: none;
+        }
+        .tree-view .border-l {
+            margin: 0.5rem 0;
+            border-color: hsl(var(--bc) / 0.2);
+        }
+        .hover-bordered {
+            padding: 0.25rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s ease;
+        }
+        .hover-bordered:hover {
+            background-color: hsl(var(--bc) / 0.1);
+        }
+        .collapse-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            padding-left: 1rem;
+        }
+        .collapse-toggle {
+            transition: transform 0.3s ease;
+            padding: 0 !important;
+            min-height: 0 !important;
+            height: auto !important;
+        }
+        .collapse-toggle i {
+            transition: transform 0.3s ease;
+            font-size: 0.75rem;
+        }
+        .checkbox:indeterminate {
+            background-color: hsl(var(--p) / 0.7);
+            border-color: hsl(var(--p) / 0.7);
+        }
+        .checkbox-sm {
+            width: 1rem !important;
+            height: 1rem !important;
+            border-radius: 0.25rem;
+        }
+        .tree-view label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            color: hsl(var(--bc));
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+        }
+        .tree-view .collapse-content > div {
+            padding-left: 1rem;
+            border-left: 1px solid hsl(var(--bc) / 0.2);
+            margin: 0.5rem 0;
+        }
+        .tree-view::-webkit-scrollbar,
+        .bg-base-300::-webkit-scrollbar {
+            width: 8px;
+        }
+        .tree-view::-webkit-scrollbar-track,
+        .bg-base-300::-webkit-scrollbar-track {
+            background: hsl(var(--b3));
+            border-radius: 4px;
+        }
+        .tree-view::-webkit-scrollbar-thumb,
+        .bg-base-300::-webkit-scrollbar-thumb {
+            background: hsl(var(--p));
+            border-radius: 4px;
+        }
+        .tree-view::-webkit-scrollbar-thumb:hover,
+        .bg-base-300::-webkit-scrollbar-thumb:hover {
+            background: hsl(var(--pf));
+        }
+        #markdownOutput {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: monospace;
+        }
+        .collapse {
+            @apply rounded-lg;
+            transition: all 0.3s ease;
+        }
+        .collapse-title {
+            @apply bg-base-300;
+            transition: background-color 0.3s ease;
+        }
+        .collapse-title:hover {
+            @apply bg-base-200;
+        }
+        .collapse-content {
+            @apply bg-base-100;
+            padding: 1rem !important;
+        }
+        .card {
+            margin: 0 !important;
+        }
+        .tree-view .menu {
+            background: transparent !important;
+        }
+        .hover-bordered:hover {
+            @apply bg-base-300;
+            border-radius: 0.5rem;
+        }
+        .tree-view li {
+            margin: 0.25rem 0;
+        }
+        .tree-view .border-l {
+            margin: 0.5rem 0;
+        }
+        .checkbox:indeterminate {
+            @apply bg-primary border-primary;
+            opacity: 0.7;
+        }
+        .checkbox-sm {
+            width: 1rem;
+            height: 1rem;
+        }
+        /* Reset collapse styles */
+        .tree-view .collapse-content {
+            max-height: none !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            background: transparent !important;
+        }
+        
+        /* Custom collapse styles for tree */
+        .tree-view .tree-collapse {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        
+        .tree-view .tree-collapse.expanded {
+            max-height: 1000px; /* Large enough to show content */
+        }
+        /* Toast styling */
+        .toast {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            background: hsl(var(--p));
+            color: white;
+            z-index: 1000;
+            transform: translateY(150%);
+            transition: transform 0.3s ease-out;
+            max-width: 24rem;
+        }
+        .toast.error {
+            background: hsl(var(--er));
+        }
+        .toast.success {
+            background: hsl(var(--su));
+        }
+        .toast.show {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-base-300">
+    <!-- Toast container -->
+    <div id="toastContainer"></div>
+
+    <!-- Modal -->
+    <dialog id="modal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg" id="modalTitle"></h3>
+            <p class="py-4" id="modalContent"></p>
+            <div class="modal-action">
+                <form method="dialog">
+                    <button class="btn">Close</button>
+                </form>
+            </div>
+        </div>
+    </dialog>
+
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold mb-8 text-primary">Documentation Compiler</h1>
+        
+        <!-- Page Tree View -->
+        <div class="space-y-4">
+            <!-- Input Card -->
+            <div class="collapse collapse-arrow bg-base-200">
+                <input type="checkbox" checked /> 
+                <div class="collapse-title text-xl font-medium text-primary flex items-center">
+                    <i class="fas fa-link mr-2"></i> Input URL
+                </div>
+                <div class="collapse-content">
+                    <div class="card bg-base-200 shadow-xl">
+                        <div class="card-body">
+                            <form id="urlForm" class="space-y-4">
+                                <div class="form-control">
+                                    <label class="label">
+                                        <span class="label-text">Documentation URL</span>
+                                    </label>
+                                    <input type="url" id="url" required placeholder="Enter documentation URL" 
+                                           class="input input-bordered w-full" />
+                                </div>
+                                <div class="form-control">
+                                    <label class="label">
+                                        <span class="label-text">API Keys</span>
+                                    </label>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <input type="password" id="deepseekApiKey" placeholder="DeepSeek API Key" 
+                                                   class="input input-bordered w-full mb-2" />
+                                            <button type="button" id="useDeepseek" class="btn btn-primary w-full">
+                                                <i class="fas fa-brain mr-2"></i> Use DeepSeek
+                                            </button>
+                                        </div>
+                                        <div>
+                                            <input type="password" id="groqApiKey" placeholder="Groq API Key" 
+                                                   class="input input-bordered w-full mb-2" />
+                                            <button type="button" id="useGroq" class="btn btn-secondary w-full">
+                                                <i class="fas fa-bolt mr-2"></i> Use Groq
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-full">
+                                    <i class="fas fa-search mr-2"></i> Analyze Documentation
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading Animation -->
+            <div class="loading-animation card bg-base-200 shadow-xl">
+                <div class="card-body text-center">
+                    <div class="loading loading-spinner loading-lg text-primary"></div>
+                    <p class="mt-4 text-primary">Analyzing documentation structure...</p>
+                </div>
+            </div>
+
+            <!-- Documentation Structure Card -->
+            <div id="pageTree" class="collapse collapse-arrow bg-base-200 hidden">
+                <input type="checkbox" checked /> 
+                <div class="collapse-title text-xl font-medium text-primary flex items-center">
+                    <i class="fas fa-sitemap mr-2"></i> Documentation Structure
+                </div>
+                <div class="collapse-content">
+                    <div class="card bg-base-200 shadow-xl">
+                        <div class="card-body">
+                            <div class="flex justify-end space-x-2 mb-4">
+                                <button id="selectAllBtn" class="btn btn-sm btn-outline btn-primary">
+                                    <i class="fas fa-check-square mr-2"></i> Select All
+                                </button>
+                                <button id="deselectAllBtn" class="btn btn-sm btn-outline btn-secondary">
+                                    <i class="fas fa-square mr-2"></i> Deselect All
+                                </button>
+                            </div>
+                            <div class="tree-view max-h-[60vh] overflow-y-auto pr-4 border border-base-300 rounded-lg p-4">
+                                <!-- Tree content will be inserted here -->
+                            </div>
+                            <div class="card-actions justify-end mt-4">
+                                <button id="generateBtn" class="btn btn-primary">
+                                    <i class="fas fa-magic mr-2"></i> Generate Markdown
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Result Card -->
+            <div id="result" class="collapse collapse-arrow bg-base-200 hidden">
+                <input type="checkbox" checked /> 
+                <div class="collapse-title text-xl font-medium text-primary flex items-center">
+                    <i class="fas fa-file-alt mr-2"></i> Generated Markdown
+                </div>
+                <div class="collapse-content">
+                    <div class="card bg-base-200 shadow-xl">
+                        <div class="card-body">
+                            <div class="flex justify-end space-x-2 mb-4">
+                                <button id="copyBtn" class="btn btn-sm btn-secondary">
+                                    <i class="fas fa-copy mr-2"></i> Copy
+                                </button>
+                                <button id="downloadBtn" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-download mr-2"></i> Download
+                                </button>
+                            </div>
+                            <div class="bg-base-300 rounded-lg p-4 max-h-[60vh] overflow-y-auto border border-base-300">
+                                <pre><code id="markdownOutput" class="text-sm"></code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let pageData = null;
+        let selectedApiKey = null;
+        let useGroq = false;
+
+        // Toast and Modal functions
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div class="flex items-center">
+                    <span class="flex-1">${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            document.getElementById('toastContainer').appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function showModal(title, content) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalContent').textContent = content;
+            document.getElementById('modal').showModal();
+        }
+
+        // API selection handlers
+        document.getElementById('useDeepseek').addEventListener('click', () => {
+            const apiKey = document.getElementById('deepseekApiKey').value;
+            if (!apiKey) {
+                showToast('Please enter your DeepSeek API key', 'error');
+                return;
+            }
+            selectedApiKey = apiKey;
+            useGroq = false;
+            document.getElementById('useDeepseek').classList.add('btn-active');
+            document.getElementById('useGroq').classList.remove('btn-active');
+            showToast('DeepSeek API selected', 'success');
+        });
+
+        document.getElementById('useGroq').addEventListener('click', () => {
+            const apiKey = document.getElementById('groqApiKey').value;
+            if (!apiKey) {
+                showToast('Please enter your Groq API key', 'error');
+                return;
+            }
+            selectedApiKey = apiKey;
+            useGroq = true;
+            document.getElementById('useGroq').classList.add('btn-active');
+            document.getElementById('useDeepseek').classList.remove('btn-active');
+            showToast('Groq API selected', 'success');
+        });
+
+        document.getElementById('urlForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = document.getElementById('url').value;
+            
+            if (!selectedApiKey) {
+                showToast('Please select an API to use (DeepSeek or Groq)', 'error');
+                return;
+            }
+            
+            // Show loading animation
+            document.querySelector('.loading-animation').classList.add('active');
+            document.querySelector('.loading-animation p').textContent = 'Analyzing documentation structure...';
+            
+            try {
+                const response = await fetch('/api/crawl', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        url, 
+                        api_key: selectedApiKey,
+                        use_groq: useGroq
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error);
+                }
+                
+                const data = await response.json();
+                if (!data || !data.pages) {
+                    throw new Error('Invalid response format from server');
+                }
+                
+                console.log('Received page data:', data.pages);
+                pageData = data;
+                
+                // Render the tree with the pages data directly
+                renderPageTree(data.pages);  // Pass the root node directly without wrapping in array
+                
+                // Show page tree
+                document.getElementById('pageTree').classList.remove('hidden');
+                
+                // Animate the appearance
+                anime({
+                    targets: '#pageTree',
+                    opacity: [0, 1],
+                    translateY: [20, 0],
+                    duration: 800,
+                    easing: 'easeOutElastic(1, .8)'
+                });
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error analyzing documentation: ' + error.message, 'error');
+            } finally {
+                document.querySelector('.loading-animation').classList.remove('active');
+            }
+        });
+
+        function buildTreeHTML(pages, level = 0) {
+            if (!pages) {
+                console.log('No pages to render at level', level);
+                return '';
+            }
+            
+            console.log('Building tree HTML for level', level, 'with page:', pages);
+            
+            // Handle single page object
+            const url = pages.url || '#';
+            const title = pages.title || url.split('/').pop() || 'Untitled';
+            const children = pages.children || [];
+            const hasChildren = children && children.length > 0;
+            const collapseId = `collapse-${url.replace(/[^a-zA-Z0-9]/g, '-')}`;
+            
+            // Skip certain URLs and empty titles
+            if (url.includes('/_next/') || 
+                url.includes('/manifest.') || 
+                url.includes('/cdn-cgi/') ||
+                !title.trim()) {
+                console.log('Skipping URL:', url);
+                return '';
+            }
+            
+            console.log('Rendering node:', { url, title, hasChildren, childCount: children.length });
+            
+            let html = `
+                <li class="hover-bordered">
+                    <div class="flex items-center gap-2 py-2">
+                        ${hasChildren ? `
+                            <button class="btn btn-xs btn-ghost collapse-toggle p-0 min-h-0 h-auto" data-collapse="${collapseId}">
+                                <i class="fas fa-chevron-right transition-transform"></i>
+                            </button>
+                        ` : '<span class="w-4"></span>'}
+                        <label class="flex items-center flex-1 cursor-pointer">
+                            <input type="checkbox" class="checkbox checkbox-primary checkbox-sm" 
+                                   checked
+                                   data-url="${url}"
+                                   data-folder="${hasChildren}">
+                            <span class="ml-2 text-sm">${title}</span>
+                        </label>
+                    </div>
+                    ${hasChildren ? `
+                        <div id="${collapseId}" class="tree-collapse">
+                            <div class="pl-4 border-l border-base-300">
+                                <ul class="menu w-full">
+                                    ${children.map(child => buildTreeHTML(child, level + 1)).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    ` : ''}
+                </li>
+            `;
+            
+            return html;
+        }
+
+        function renderPageTree(pages) {
+            if (!pages || typeof pages !== 'object') {
+                console.error('Invalid pages data:', pages);
+                return;
+            }
+            
+            console.log('Rendering tree with pages:', pages);
+            const treeView = document.querySelector('.tree-view');
+            const treeHTML = `<ul class="menu w-full">${buildTreeHTML(pages)}</ul>`;
+            
+            if (!treeHTML.trim()) {
+                console.error('No HTML generated for tree');
+                treeView.innerHTML = '<div class="text-center text-error">No valid pages found in the documentation.</div>';
+                return;
+            }
+            
+            console.log('Setting tree HTML');
+            treeView.innerHTML = treeHTML;
+            
+            // Expand all collapse toggles initially
+            document.querySelectorAll('.collapse-toggle').forEach(toggle => {
+                const collapseId = toggle.dataset.collapse;
+                const content = document.getElementById(collapseId);
+                const icon = toggle.querySelector('i');
+                
+                if (content) {
+                    content.classList.add('expanded');
+                    icon.style.transform = 'rotate(90deg)';
+                }
+                
+                toggle.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const content = document.getElementById(collapseId);
+                    const icon = e.currentTarget.querySelector('i');
+                    
+                    content.classList.toggle('expanded');
+                    icon.style.transform = content.classList.contains('expanded') ? 'rotate(90deg)' : 'rotate(0deg)';
+                });
+            });
+
+            // Add event listeners for checkboxes
+            document.querySelectorAll('.tree-view input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', (e) => {
+                    const isFolder = e.target.dataset.folder === 'true';
+                    if (isFolder) {
+                        // Find all checkboxes in this folder
+                        const li = e.target.closest('li');
+                        const childCheckboxes = li.querySelectorAll('input[type="checkbox"]');
+                        childCheckboxes.forEach(cb => {
+                            cb.checked = e.target.checked;
+                            cb.indeterminate = false;
+                        });
+                    }
+                    
+                    // Update parent folder state
+                    updateParentCheckboxState(e.target);
+                });
+            });
+        }
+
+        function updateParentCheckboxState(checkbox) {
+            const li = checkbox.closest('li');
+            const parentLi = li.parentElement.closest('li');
+            if (!parentLi) return;
+
+            const parentCheckbox = parentLi.querySelector('input[type="checkbox"]');
+            if (!parentCheckbox) return;
+
+            const siblingCheckboxes = Array.from(
+                parentLi.querySelectorAll('li > div > label > input[type="checkbox"]')
+            );
+            
+            const allChecked = siblingCheckboxes.every(cb => cb.checked);
+            const someChecked = siblingCheckboxes.some(cb => cb.checked || cb.indeterminate);
+            
+            parentCheckbox.checked = allChecked;
+            parentCheckbox.indeterminate = someChecked && !allChecked;
+            
+            // Recursively update parent states
+            updateParentCheckboxState(parentCheckbox);
+        }
+
+        // Add event listeners for select/deselect all buttons
+        document.getElementById('selectAllBtn').addEventListener('click', () => {
+            document.querySelectorAll('.tree-view input[type="checkbox"]').forEach(cb => {
+                cb.checked = true;
+            });
+        });
+
+        document.getElementById('deselectAllBtn').addEventListener('click', () => {
+            document.querySelectorAll('.tree-view input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+            });
+        });
+
+        // Add event listeners for generate, copy, and download buttons
+        document.getElementById('generateBtn').addEventListener('click', async () => {
+            if (!pageData || !pageData.pages) {
+                showToast('Please analyze a documentation URL first', 'error');
+                return;
+            }
+
+            if (!selectedApiKey) {
+                showToast('Please select an API to use (DeepSeek or Groq)', 'error');
+                return;
+            }
+
+            // Show loading animation
+            document.querySelector('.loading-animation').classList.add('active');
+            document.querySelector('.loading-animation p').textContent = 'Generating markdown...';
+
+            try {
+                // Get selected pages
+                const checkboxes = document.querySelectorAll('.tree-view input[type="checkbox"]');
+                const selectedUrls = new Set(
+                    Array.from(checkboxes)
+                        .filter(cb => cb.checked)
+                        .map(cb => cb.dataset.url)
+                );
+
+                // Update selection status in page data
+                function updateSelection(pages) {
+                    if (!pages) return;
+                    if (Array.isArray(pages)) {
+                        pages.forEach(page => updateSelection(page));
+                        return;
+                    }
+                    pages.selected = selectedUrls.has(pages.url);
+                    if (pages.children) {
+                        pages.children.forEach(child => updateSelection(child));
+                    }
+                }
+                updateSelection(pageData.pages);
+
+                // Generate markdown
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        pages: [pageData.pages],  // Wrap the pages in an array
+                        api_key: selectedApiKey,
+                        use_groq: useGroq
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to generate markdown');
+                }
+
+                const result = await response.json();
+                
+                // Show result
+                document.getElementById('result').classList.remove('hidden');
+                document.getElementById('markdownOutput').textContent = result.content;
+
+                // Animate the appearance
+                anime({
+                    targets: '#result',
+                    opacity: [0, 1],
+                    translateY: [20, 0],
+                    duration: 800,
+                    easing: 'easeOutElastic(1, .8)'
+                });
+
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error generating markdown: ' + error.message, 'error');
+            } finally {
+                document.querySelector('.loading-animation').classList.remove('active');
+            }
+        });
+
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            const markdown = document.getElementById('markdownOutput').textContent;
+            navigator.clipboard.writeText(markdown)
+                .then(() => showToast('Copied to clipboard!', 'success'))
+                .catch(err => {
+                    console.error('Failed to copy:', err);
+                    showToast('Failed to copy to clipboard', 'error');
+                });
+        });
+
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            const markdown = document.getElementById('markdownOutput').textContent;
+            const blob = new Blob([markdown], { type: 'text/markdown' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'documentation.md';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html> 
