@@ -188,6 +188,30 @@
         .toast.show {
             transform: translateY(0);
         }
+        
+        /* Make the UI more elegant */
+        .card {
+            @apply shadow-lg border border-base-300/10;
+        }
+        .collapse {
+            @apply shadow-md border border-base-300/10;
+        }
+        .collapse-title {
+            @apply text-lg font-medium;
+        }
+        .tree-view {
+            @apply bg-base-200/50 backdrop-blur-sm;
+        }
+        .input {
+            @apply bg-base-200/70 backdrop-blur-sm;
+        }
+        .btn {
+            @apply shadow-sm;
+        }
+        /* Smooth transitions */
+        .btn, .input, .card, .collapse {
+            @apply transition-all duration-300;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-base-300">
@@ -234,24 +258,31 @@
                                         <span class="label-text">API Keys</span>
                                     </label>
                                     <div class="grid grid-cols-2 gap-4">
-                                        <div>
+                                        <div class="space-y-2">
                                             <input type="password" id="deepseekApiKey" placeholder="DeepSeek API Key" 
-                                                   class="input input-bordered w-full mb-2" />
-                                            <button type="button" id="useDeepseek" class="btn btn-primary w-full">
-                                                <i class="fas fa-brain mr-2"></i> Use DeepSeek
+                                                   class="input input-sm input-bordered w-full" />
+                                            <button type="button" id="useDeepseek" 
+                                                    class="btn btn-sm w-full bg-base-200 text-base-content hover:bg-primary hover:text-primary-content transition-colors duration-300"
+                                                    data-selected="false">
+                                                <i class="fas fa-brain text-xs"></i>
+                                                <span class="ml-1 text-sm">DeepSeek</span>
                                             </button>
                                         </div>
-                                        <div>
+                                        <div class="space-y-2">
                                             <input type="password" id="groqApiKey" placeholder="Groq API Key" 
-                                                   class="input input-bordered w-full mb-2" />
-                                            <button type="button" id="useGroq" class="btn btn-secondary w-full">
-                                                <i class="fas fa-bolt mr-2"></i> Use Groq
+                                                   class="input input-sm input-bordered w-full" />
+                                            <button type="button" id="useGroq" 
+                                                    class="btn btn-sm w-full bg-base-200 text-base-content hover:bg-orange-500 hover:text-white transition-colors duration-300"
+                                                    data-selected="false">
+                                                <i class="fas fa-bolt text-xs"></i>
+                                                <span class="ml-1 text-sm">Groq</span>
                                             </button>
                                         </div>
                                     </div>
                                 </div>
-                                <button type="submit" class="btn btn-primary w-full">
-                                    <i class="fas fa-search mr-2"></i> Analyze Documentation
+                                <button type="submit" class="btn btn-sm btn-primary w-full mt-4">
+                                    <i class="fas fa-search text-xs"></i>
+                                    <span class="ml-1">Analyze Documentation</span>
                                 </button>
                             </form>
                         </div>
@@ -364,8 +395,22 @@
             }
             selectedApiKey = apiKey;
             useGroq = false;
-            document.getElementById('useDeepseek').classList.add('btn-active');
-            document.getElementById('useGroq').classList.remove('btn-active');
+            
+            // Update button states
+            const deepseekBtn = document.getElementById('useDeepseek');
+            const groqBtn = document.getElementById('useGroq');
+            
+            // Update data attributes
+            deepseekBtn.dataset.selected = 'true';
+            groqBtn.dataset.selected = 'false';
+            
+            // Update classes
+            deepseekBtn.classList.remove('bg-base-200', 'text-base-content');
+            deepseekBtn.classList.add('bg-primary', 'text-primary-content');
+            
+            groqBtn.classList.remove('bg-orange-500', 'text-white');
+            groqBtn.classList.add('bg-base-200', 'text-base-content');
+            
             showToast('DeepSeek API selected', 'success');
         });
 
@@ -377,8 +422,22 @@
             }
             selectedApiKey = apiKey;
             useGroq = true;
-            document.getElementById('useGroq').classList.add('btn-active');
-            document.getElementById('useDeepseek').classList.remove('btn-active');
+            
+            // Update button states
+            const deepseekBtn = document.getElementById('useDeepseek');
+            const groqBtn = document.getElementById('useGroq');
+            
+            // Update data attributes
+            groqBtn.dataset.selected = 'true';
+            deepseekBtn.dataset.selected = 'false';
+            
+            // Update classes
+            groqBtn.classList.remove('bg-base-200', 'text-base-content');
+            groqBtn.classList.add('bg-orange-500', 'text-white');
+            
+            deepseekBtn.classList.remove('bg-primary', 'text-primary-content');
+            deepseekBtn.classList.add('bg-base-200', 'text-base-content');
+            
             showToast('Groq API selected', 'success');
         });
 
